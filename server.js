@@ -1,5 +1,7 @@
 const express = require("express");
 const { chromium } = require("playwright");
+const https = require("https");
+const http = require("http");
 
 let isStopped = false;
 let shouldSkip = false;
@@ -181,6 +183,13 @@ async function fetchDlink(link, log) {
 
 // 🚀 Express API
 const app = express();
+const path = require('path');
+
+app.use(express.static(__dirname));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 app.get("/api", async (req, res) => {
   const link = req.query.link;
@@ -197,8 +206,46 @@ app.get("/api", async (req, res) => {
   }
 });
 
+app.get("/api/download", async (req, res) => {
+  const link = req.query.link;
+  if (!link) return res.status(400).json({ success: false, error: "Missing link parameter ?link=" });
+
+  console.log(`📎 Downloading from: ${link}`);
+
+  const result = await fetchDlink(link, console.log);
+
+  if (!result.dlink) {
+    return res.json({ success: false, error: "No download link found" });
+  }
+
+  try {
+    const protocol = result.dlink.startsWith('https:') ? https : http;
+    
+    protocol.get(result.dlink, (downloadRes) => {
+      const fileName = result.name || 'terabox_video.mp4';
+      
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Type', downloadRes.headers['content-type'] || 'video/mp4');
+      
+      if (downloadRes.headers['content-length']) {
+        res.setHeader('Content-Length', downloadRes.headers['content-length']);
+      }
+      
+      downloadRes.pipe(res);
+    }).on('error', (err) => {
+      console.error('Download error:', err);
+      res.status(500).json({ success: false, error: 'Download failed' });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 app.listen(3000, () => {
-  console.log("✅ API running at http://localhost:3000/api?");
+  console.log("✅ Terabox Video Downloader: http://localhost:3000");
+  console.log("✅ API endpoint: http://localhost:3000/api");
+  console.log("✅ Download endpoint: http://localhost:3000/api/download");
 });
 
 // exports (optional)

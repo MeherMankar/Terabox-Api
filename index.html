@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Terabox Video Downloader</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>📦 Terabox Video Downloader</h1>
+    <input type="text" id="linkInput" placeholder="Paste Terabox share link here...">
+    <button onclick="getInfo()">Get Video Info</button>
+    <button onclick="downloadVideo()">Download Video</button>
+    
+    <div id="result" class="result" style="display:none;"></div>
+
+    <script>
+        async function getInfo() {
+            const link = document.getElementById('linkInput').value;
+            if (!link) return alert('Please enter a Terabox link');
+            
+            const response = await fetch(`/api?link=${encodeURIComponent(link)}`);
+            const data = await response.json();
+            
+            const result = document.getElementById('result');
+            if (data.success) {
+                result.innerHTML = `
+                    <h3>Video Info:</h3>
+                    <p><strong>Name:</strong> ${data.dlink.name || 'Unknown'}</p>
+                    <p><strong>Size:</strong> ${data.dlink.size || 'Unknown'}</p>
+                    <p><strong>Direct Link:</strong> <a href="${data.dlink.dlink}" target="_blank">Open</a></p>
+                `;
+                result.style.display = 'block';
+            } else {
+                result.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+                result.style.display = 'block';
+            }
+        }
+        
+        function downloadVideo() {
+            const link = document.getElementById('linkInput').value;
+            if (!link) return alert('Please enter a Terabox link');
+            
+            window.open(`/api/download?link=${encodeURIComponent(link)}`, '_blank');
+        }
+    </script>
+</body>
+</html>
